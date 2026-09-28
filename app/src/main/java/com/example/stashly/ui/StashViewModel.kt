@@ -20,10 +20,18 @@ import kotlinx.coroutines.launch
 class StashViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StashRepository
+    private var currentUserId: String = ""
 
     init {
         val dao = StashDatabase.getDatabase(application).stashDao()
         repository = StashRepository(dao)
+    }
+
+    fun initUserSession(userId: String) {
+        if (userId.isNotBlank() && userId != currentUserId) {
+            currentUserId = userId
+            repository.startRemoteSync(userId, viewModelScope)
+        }
     }
 
     private val _searchQuery = MutableStateFlow("")
@@ -56,16 +64,10 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
         _showArchived
     ) { itemsList, query, type, tag, isArchived ->
         itemsList.filter { item ->
-            // Filter by archive state
+            val userMatches = currentUserId.isBlank() || item.userId.isBlank() || item.userId == currentUserId
             val archiveMatches = item.isArchived == isArchived
-
-            // Filter by type
             val typeMatches = type == null || item.type == type
-
-            // Filter by tag
             val tagMatches = tag == null || item.tags.contains(tag)
-
-            // Filter by search query
             val searchMatches = if (query.isBlank()) true else {
                 val q = query.trim().lowercase()
                 item.title.lowercase().contains(q) ||
@@ -74,7 +76,7 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
                         item.tags.any { it.lowercase().contains(q) }
             }
 
-            archiveMatches && typeMatches && tagMatches && searchMatches
+            userMatches && archiveMatches && typeMatches && tagMatches && searchMatches
         }
     }.stateIn(
         scope = viewModelScope,
@@ -96,7 +98,6 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setShowArchived(show: Boolean) {
         _showArchived.value = show
-        // Clear tag filter when toggling tabs if necessary
     }
 
     fun saveItem(
@@ -112,6 +113,7 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
             val cleanTags = tags.map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }
             if (id == 0L) {
                 val newItem = StashItem(
+                    userId = currentUserId,
                     type = type,
                     title = title.ifBlank { "Untitled ${type.label}" },
                     content = content,
@@ -126,6 +128,7 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
                 val existingItem = repository.getItemById(id)
                 if (existingItem != null) {
                     val updatedItem = existingItem.copy(
+                        userId = if (existingItem.userId.isBlank()) currentUserId else existingItem.userId,
                         type = type,
                         title = title.ifBlank { "Untitled ${type.label}" },
                         content = content,

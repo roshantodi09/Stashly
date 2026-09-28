@@ -1,18 +1,24 @@
 package com.example.stashly.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.stashly.data.StashType
+import com.example.stashly.ui.AuthViewModel
 import com.example.stashly.ui.StashViewModel
 import com.example.stashly.ui.screens.AddEditScreen
+import com.example.stashly.ui.screens.AuthScreen
 import com.example.stashly.ui.screens.DetailScreen
 import com.example.stashly.ui.screens.HomeScreen
 
 object Screen {
+    const val AUTH = "auth"
     const val HOME = "home"
     const val ADD_EDIT = "add_edit?itemId={itemId}&type={type}"
     const val DETAIL = "detail/{itemId}"
@@ -27,23 +33,63 @@ object Screen {
 }
 
 @Composable
-fun AppNavigation(viewModel: StashViewModel) {
+fun AppNavigation(
+    stashViewModel: StashViewModel,
+    authViewModel: AuthViewModel
+) {
     val navController = rememberNavController()
+    val currentUser by authViewModel.currentUser.collectAsState()
+
+    val startDestination = if (currentUser == null) Screen.AUTH else Screen.HOME
+
+    LaunchedEffect(currentUser) {
+        val user = currentUser
+        if (user != null) {
+            stashViewModel.initUserSession(user.uid)
+        }
+    }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.HOME
+        startDestination = startDestination
     ) {
-        composable(Screen.HOME) {
-            HomeScreen(
-                viewModel = viewModel,
-                onAddItem = {
-                    navController.navigate(Screen.createAddEditRoute())
-                },
-                onItemClick = { itemId ->
-                    navController.navigate(Screen.createDetailRoute(itemId))
+        composable(Screen.AUTH) {
+            AuthScreen(
+                authViewModel = authViewModel,
+                onAuthSuccess = {
+                    navController.navigate(Screen.HOME) {
+                        popUpTo(Screen.AUTH) { inclusive = true }
+                    }
                 }
             )
+        }
+
+        composable(Screen.HOME) {
+            val user = currentUser
+            if (user == null) {
+                LaunchedEffect(Unit) {
+                    navController.navigate(Screen.AUTH) {
+                        popUpTo(Screen.HOME) { inclusive = true }
+                    }
+                }
+            } else {
+                HomeScreen(
+                    viewModel = stashViewModel,
+                    userEmail = user.email,
+                    onSignOut = {
+                        authViewModel.signOut()
+                        navController.navigate(Screen.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onAddItem = {
+                        navController.navigate(Screen.createAddEditRoute())
+                    },
+                    onItemClick = { itemId ->
+                        navController.navigate(Screen.createDetailRoute(itemId))
+                    }
+                )
+            }
         }
 
         composable(
@@ -68,7 +114,7 @@ fun AppNavigation(viewModel: StashViewModel) {
             }
 
             AddEditScreen(
-                viewModel = viewModel,
+                viewModel = stashViewModel,
                 itemId = itemId,
                 initialType = initialType,
                 onBack = { navController.popBackStack() }
@@ -86,7 +132,7 @@ fun AppNavigation(viewModel: StashViewModel) {
             val itemId = backStackEntry.arguments?.getLong("itemId") ?: 0L
 
             DetailScreen(
-                viewModel = viewModel,
+                viewModel = stashViewModel,
                 itemId = itemId,
                 onBack = { navController.popBackStack() },
                 onEdit = { editItemId ->
