@@ -46,6 +46,8 @@ fun AppNavigation(
         val user = currentUser
         if (user != null) {
             stashViewModel.initUserSession(user.uid)
+        } else {
+            stashViewModel.clearSession()
         }
     }
 
@@ -71,6 +73,7 @@ fun AppNavigation(
                 userEmail = user?.email,
                 onSignOut = {
                     authViewModel.signOut()
+                    stashViewModel.clearSession()
                     navController.navigate(Screen.AUTH) {
                         popUpTo(0) { inclusive = true }
                     }

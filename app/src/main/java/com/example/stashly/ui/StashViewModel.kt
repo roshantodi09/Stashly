@@ -34,6 +34,10 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun clearSession() {
+        currentUserId = ""
+    }
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -64,7 +68,7 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
         _showArchived
     ) { itemsList, query, type, tag, isArchived ->
         itemsList.filter { item ->
-            val userMatches = currentUserId.isBlank() || item.userId.isBlank() || item.userId == currentUserId
+            val userMatches = if (currentUserId.isNotBlank()) item.userId == currentUserId || item.userId.isBlank() else true
             val archiveMatches = item.isArchived == isArchived
             val typeMatches = type == null || item.type == type
             val tagMatches = tag == null || item.tags.contains(tag)

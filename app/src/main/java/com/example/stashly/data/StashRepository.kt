@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class StashRepository(
     private val dao: StashDao,
@@ -39,8 +40,11 @@ class StashRepository(
                             val type = try { StashType.valueOf(typeStr) } catch (e: Exception) { StashType.NOTE }
                             val tagsList = (doc.get("tags") as? List<*>)?.mapNotNull { it.toString() } ?: emptyList()
 
+                            // Compute stable deterministic ID from document ID to prevent duplicate infinite inserts
+                            val stableId = doc.getLong("id") ?: abs(doc.id.hashCode().toLong()).let { if (it == 0L) 1L else it }
+
                             val item = StashItem(
-                                id = doc.getLong("id") ?: System.currentTimeMillis(),
+                                id = stableId,
                                 userId = doc.getString("userId") ?: userId,
                                 type = type,
                                 title = doc.getString("title") ?: "",
@@ -51,7 +55,7 @@ class StashRepository(
                                 updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis(),
                                 isArchived = doc.getBoolean("isArchived") ?: false
                             )
-                            // Direct DAO insert to update local Room DB without recursive remote sync
+                            // Direct DAO insert to update local Room DB
                             dao.insertItem(item)
                         }
                     }
