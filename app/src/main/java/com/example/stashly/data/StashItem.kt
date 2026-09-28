@@ -14,9 +14,10 @@ enum class StashType(val label: String) {
 data class StashItem(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val type: StashType,
-    val title: String,
-    val content: String,
+    val userId: String = "",
+    val type: StashType = StashType.NOTE,
+    val title: String = "",
+    val content: String = "",
     val url: String? = null,
     val tags: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
