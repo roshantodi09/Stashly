@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 class StashViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StashRepository
-    private var currentUserId: String = ""
+    private val _currentUserId = MutableStateFlow("")
 
     init {
         val dao = StashDatabase.getDatabase(application).stashDao()
@@ -28,14 +28,14 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun initUserSession(userId: String) {
-        if (userId.isNotBlank() && userId != currentUserId) {
-            currentUserId = userId
+        if (userId.isNotBlank() && userId != _currentUserId.value) {
+            _currentUserId.value = userId
             repository.startRemoteSync(userId, viewModelScope)
         }
     }
 
     fun clearSession() {
-        currentUserId = ""
+        _currentUserId.value = ""
     }
 
     private val _searchQuery = MutableStateFlow("")
@@ -62,13 +62,24 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
 
     val items: StateFlow<List<StashItem>> = combine(
         allItems,
+        _currentUserId,
         _searchQuery,
         _selectedType,
         _selectedTag,
         _showArchived
-    ) { itemsList, query, type, tag, isArchived ->
+    ) { flows ->
+        @Suppress("UNCHECKED_CAST")
+        val itemsList = flows[0] as List<StashItem>
+        val userId = flows[1] as String
+        val query = flows[2] as String
+        @Suppress("UNCHECKED_CAST")
+        val type = flows[3] as StashType?
+        @Suppress("UNCHECKED_CAST")
+        val tag = flows[4] as String?
+        val isArchived = flows[5] as Boolean
+
         itemsList.filter { item ->
-            val userMatches = if (currentUserId.isNotBlank()) item.userId == currentUserId || item.userId.isBlank() else true
+            val userMatches = if (userId.isNotBlank()) item.userId == userId || item.userId.isBlank() else true
             val archiveMatches = item.isArchived == isArchived
             val typeMatches = type == null || item.type == type
             val tagMatches = tag == null || item.tags.contains(tag)
@@ -115,9 +126,10 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val cleanTags = tags.map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }
+            val userId = _currentUserId.value
             if (id == 0L) {
                 val newItem = StashItem(
-                    userId = currentUserId,
+                    userId = userId,
                     type = type,
                     title = title.ifBlank { "Untitled ${type.label}" },
                     content = content,
@@ -132,7 +144,7 @@ class StashViewModel(application: Application) : AndroidViewModel(application) {
                 val existingItem = repository.getItemById(id)
                 if (existingItem != null) {
                     val updatedItem = existingItem.copy(
-                        userId = if (existingItem.userId.isBlank()) currentUserId else existingItem.userId,
+                        userId = if (existingItem.userId.isBlank()) userId else existingItem.userId,
                         type = type,
                         title = title.ifBlank { "Untitled ${type.label}" },
                         content = content,
