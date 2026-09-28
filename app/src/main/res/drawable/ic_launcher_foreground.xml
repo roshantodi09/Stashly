@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Stash box back card (Emerald Accent) -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M34,26 h40 a6,6 0 0,1 6,6 v42 a6,6 0 0,1 -6,6 h-40 a6,6 0 0,1 -6,-6 v-42 a6,6 0 0,1 6,-6 z" />
+
+    <!-- Stash main card (Pure White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,32 h52 a6,6 0 0,1 6,6 v42 a6,6 0 0,1 -6,6 h-52 a6,6 0 0,1 -6,-6 v-42 a6,6 0 0,1 6,-6 z" />
+
+    <!-- Stylized Bookmark / Fold in Deep Emerald -->
+    <path
+        android:fillColor="#0D6E5B"
+        android:pathData="M64,32 v20 l-8,-6 l-8,6 v-20 z" />
+
+    <!-- Feature Color Accents (Note, Link, Snippet, Image) -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M36,58 h20 v4 h-20 z" />
+
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M36,66 h30 v4 h-30 z" />
+
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M70,58 h8 v12 h-8 z" />
+
+</vector>
