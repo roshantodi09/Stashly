@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [StashItem::class], version = 1, exportSchema = false)
+@Database(entities = [StashItem::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class StashDatabase : RoomDatabase() {
 
