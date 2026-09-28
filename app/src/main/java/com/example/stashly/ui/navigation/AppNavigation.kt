@@ -66,30 +66,22 @@ fun AppNavigation(
 
         composable(Screen.HOME) {
             val user = currentUser
-            if (user == null) {
-                LaunchedEffect(Unit) {
+            HomeScreen(
+                viewModel = stashViewModel,
+                userEmail = user?.email,
+                onSignOut = {
+                    authViewModel.signOut()
                     navController.navigate(Screen.AUTH) {
-                        popUpTo(Screen.HOME) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
+                },
+                onAddItem = {
+                    navController.navigate(Screen.createAddEditRoute())
+                },
+                onItemClick = { itemId ->
+                    navController.navigate(Screen.createDetailRoute(itemId))
                 }
-            } else {
-                HomeScreen(
-                    viewModel = stashViewModel,
-                    userEmail = user.email,
-                    onSignOut = {
-                        authViewModel.signOut()
-                        navController.navigate(Screen.AUTH) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onAddItem = {
-                        navController.navigate(Screen.createAddEditRoute())
-                    },
-                    onItemClick = { itemId ->
-                        navController.navigate(Screen.createDetailRoute(itemId))
-                    }
-                )
-            }
+            )
         }
 
         composable(

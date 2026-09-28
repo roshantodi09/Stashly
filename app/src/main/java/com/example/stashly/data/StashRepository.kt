@@ -1,17 +1,19 @@
 package com.example.stashly.data
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 class StashRepository(
     private val dao: StashDao,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+
+    private var syncListenerRegistration: ListenerRegistration? = null
 
     fun getAllItems(): Flow<List<StashItem>> = dao.getAllItems()
 
@@ -22,8 +24,12 @@ class StashRepository(
      */
     fun startRemoteSync(userId: String, scope: CoroutineScope) {
         if (userId.isBlank()) return
+
+        // Unregister any previous listener to prevent duplicate background loops
+        syncListenerRegistration?.remove()
+
         try {
-            firestore.collection("stash_items")
+            syncListenerRegistration = firestore.collection("stash_items")
                 .whereEqualTo("userId", userId)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
@@ -45,6 +51,7 @@ class StashRepository(
                                 updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis(),
                                 isArchived = doc.getBoolean("isArchived") ?: false
                             )
+                            // Direct DAO insert to update local Room DB without recursive remote sync
                             dao.insertItem(item)
                         }
                     }
