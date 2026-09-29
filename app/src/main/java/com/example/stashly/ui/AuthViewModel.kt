@@ -88,8 +88,28 @@ class AuthViewModel(
             if (result.isSuccess) {
                 onSuccess()
             } else {
+                val exception = result.exceptionOrNull()
+                val msg = exception?.localizedMessage ?: ""
+                if (msg.contains("CONFIGURATION_NOT_FOUND", ignoreCase = true)) {
+                    _errorMessage.value = "Email/Password sign-in is not turned ON in Firebase Console. Please go to Firebase Console -> Build -> Authentication -> Sign-in method and enable Email/Password."
+                } else {
+                    _errorMessage.value = msg.ifBlank { "Authentication failed. Please check your credentials." }
+                }
+            }
+        }
+    }
+
+    fun signInWithGoogle(idToken: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            val result = authRepository.signInWithGoogleCredential(idToken)
+            _isLoading.value = false
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
                 _errorMessage.value = result.exceptionOrNull()?.localizedMessage
-                    ?: "Authentication failed. Please check your credentials."
+                    ?: "Google Sign-In failed"
             }
         }
     }
